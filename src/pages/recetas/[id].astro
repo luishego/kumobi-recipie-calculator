@@ -1,0 +1,11 @@
+---
+// Editar receta existente (HU-03). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import RecipeBuilder from '../../components/islands/RecipeBuilder.tsx';
+
+const { id } = Astro.params;
+---
+
+<DashboardLayout title="Editar receta">
+  <RecipeBuilder recipeId={id} client:load />
+</DashboardLayout>

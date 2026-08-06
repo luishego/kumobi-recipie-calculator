@@ -1,0 +1,22 @@
+# Dependencias
+node_modules/
+
+# Build de Astro
+dist/
+.astro/
+
+# Entorno (secretos)
+.env
+.env.*
+.env.example
+
+# Credenciales de cuenta de servicio de Firebase Admin (SECRETO)
+*serviceAccount*.json
+*service-account*.json
+firebase-adminsdk*.json
+secrets/
+
+# Logs y sistema
+*.log
+.DS_Store
+Thumbs.db

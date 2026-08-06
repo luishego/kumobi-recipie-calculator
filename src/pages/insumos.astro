@@ -1,0 +1,9 @@
+---
+// Insumos (HU-02). Ruta privada.
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import IngredientsPanel from '../components/islands/IngredientsPanel.tsx';
+---
+
+<DashboardLayout title="Insumos">
+  <IngredientsPanel client:load />
+</DashboardLayout>

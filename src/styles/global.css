@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  html {
+    font-family: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    @apply bg-app text-text-base;
+    font-size: 14px;
+  }
+
+  /* Cifras monetarias/numéricas: alineación estable al recalcular en vivo. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Foco visible consistente en todo lo interactivo (a11y). */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-app;
+  }
+}

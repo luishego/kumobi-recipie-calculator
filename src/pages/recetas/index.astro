@@ -1,0 +1,9 @@
+---
+// Lista de recetas (HU-03). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import RecipesList from '../../components/islands/RecipesList.tsx';
+---
+
+<DashboardLayout title="Recetas">
+  <RecipesList client:load />
+</DashboardLayout>

@@ -1,0 +1,9 @@
+---
+// Dashboard (HU-04). Ruta privada protegida por el middleware SSR.
+import DashboardLayout from '../layouts/DashboardLayout.astro';
+import Dashboard from '../components/islands/Dashboard.tsx';
+---
+
+<DashboardLayout title="Dashboard">
+  <Dashboard client:load />
+</DashboardLayout>

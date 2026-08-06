@@ -1,0 +1,9 @@
+---
+// Constructor de nueva receta (HU-03). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import RecipeBuilder from '../../components/islands/RecipeBuilder.tsx';
+---
+
+<DashboardLayout title="Nueva receta">
+  <RecipeBuilder client:load />
+</DashboardLayout>

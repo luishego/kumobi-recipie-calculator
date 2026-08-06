@@ -1,0 +1,29 @@
+---
+// Login (HU-01) — patrón "Simple Card". Sin sidebar (fuera del shell privado).
+import '../styles/global.css';
+import LoginForm from '../components/islands/LoginForm.tsx';
+---
+
+<!doctype html>
+<html lang="es-MX">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Iniciar sesión · Kumobi</title>
+  </head>
+  <body class="flex min-h-screen flex-col items-center justify-center bg-app px-4">
+    <main class="w-full max-w-sm">
+      <div class="rounded-lg border border-border-base bg-surface p-6 shadow-card sm:p-8">
+        <div class="mb-6 text-center">
+          <p class="text-xl font-semibold text-text-strong">Kumobi</p>
+          <p class="mt-1 text-sm text-text-muted">Panel de costeo interno</p>
+        </div>
+        <LoginForm client:load />
+      </div>
+      <p class="mt-6 text-center text-xs text-text-muted">
+        Uso interno · Kumobi © 2026
+      </p>
+    </main>
+  </body>
+</html>

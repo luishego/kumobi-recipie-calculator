@@ -1,0 +1,110 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────────────────
+// Kumobi — Panel de Costeo de Recetas · Security Rules
+//
+// Basadas en las reglas del cliente. ÚNICO cambio vs. las desplegadas:
+//   • El catálogo de unidades es la colección `unit-config` (no `units`).
+//     Sin este match, el cliente recibía permission-denied al leer unidades.
+//
+// Arquitectura de cálculo (decisión): el CLIENTE calcula y escribe los campos
+// financieros (netCostPerUsageUnit, totalCost, costPerYieldUnit, …) y estas
+// reglas los VALIDAN. Las Cloud Functions se encargan de la propagación
+// (recostear recetas dependientes y marcar requiresRecalculation).
+// ─────────────────────────────────────────────────────────────────────────
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ==========================================
+    // HELPER FUNCTIONS (Funciones auxiliares)
+    // ==========================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isStaff() {
+      return isAuthenticated() &&
+        (request.auth.token.role == 'admin' || request.auth.token.role == 'chef' || request.auth.token.role == 'manager');
+    }
+
+    function isPositiveNumber(value) {
+      return value is number && value > 0;
+    }
+
+    function isNonNegativeNumber(value) {
+      return value is number && value >= 0;
+    }
+
+    // ==========================================
+    // 1. UNIT-CONFIG & CATEGORIES (Configuraciones)
+    // ==========================================
+
+    // Unidades de medida — colección `unit-config` (antes definida como `units`).
+    match /unit-config/{unitId} {
+      allow read: if isAuthenticated();
+      allow write: if isStaff();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isStaff() &&
+        request.resource.data.keys().hasAll(['name', 'appliesTo', 'hexColor']) &&
+        request.resource.data.name is string &&
+        request.resource.data.appliesTo in ['ingredient', 'recipe', 'both'];
+      allow delete: if isStaff();
+    }
+
+    // ==========================================
+    // 2. INGREDIENTS (Insumos / Materias Primas)
+    // ==========================================
+
+    match /ingredients/{ingredientId} {
+      allow read: if isAuthenticated();
+
+      allow create, update: if isStaff() &&
+        request.resource.data.keys().hasAll([
+          'name', 'categoryId', 'purchaseUnitId', 'purchasePrice',
+          'usageUnitId', 'conversionFactor', 'yieldPercentage', 'netCostPerUsageUnit'
+        ]) &&
+        isNonNegativeNumber(request.resource.data.purchasePrice) &&
+        isPositiveNumber(request.resource.data.conversionFactor) &&
+        request.resource.data.yieldPercentage > 0 &&
+        request.resource.data.yieldPercentage <= 100 &&
+        isNonNegativeNumber(request.resource.data.netCostPerUsageUnit);
+
+      allow delete: if isStaff();
+
+      match /price_history/{historyId} {
+        allow read: if isAuthenticated();
+        allow create: if isStaff() &&
+          request.resource.data.modifiedByUserId == request.auth.uid &&
+          isNonNegativeNumber(request.resource.data.previousPrice) &&
+          isNonNegativeNumber(request.resource.data.newPrice);
+        allow update, delete: if false; // El historial de precios es inmutable
+      }
+    }
+
+    // ==========================================
+    // 3. RECIPES & SUB-RECIPES (Recetas)
+    // ==========================================
+
+    match /recipes/{recipeId} {
+      allow read: if isAuthenticated();
+
+      allow create, update: if isStaff() &&
+        request.resource.data.keys().hasAll([
+          'name', 'categoryId', 'isSubRecipe', 'yield',
+          'items', 'totalCost', 'costPerYieldUnit'
+        ]) &&
+        request.resource.data.yield.keys().hasAll(['quantityProduced', 'unitId']) &&
+        isPositiveNumber(request.resource.data.yield.quantityProduced) &&
+        isNonNegativeNumber(request.resource.data.totalCost) &&
+        isNonNegativeNumber(request.resource.data.costPerYieldUnit) &&
+        request.resource.data.items is list &&
+        request.resource.data.items.size() > 0;
+
+      allow delete: if isStaff();
+    }
+  }
+}
