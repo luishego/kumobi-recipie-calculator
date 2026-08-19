@@ -1,7 +1,20 @@
 {
+  // Cloudflare Workers (Static Assets) — Kumobi, Panel de Costeo de Recetas.
+  // Se despliega con `wrangler deploy`.
   "name": "kumobi-recipie-calculator",
-	"assets": {
-		"directory": "./dist"
-	},
-  "compatibility_date": "2026-08-19"
+
+  // Entrypoint del Worker SSR que genera el adaptador de Astro.
+  // SIN esto, solo se sirven assets estáticos y las rutas SSR dan 404.
+  "main": "./dist/_worker.js/index.js",
+
+  // El adaptador de Astro usa APIs de Node (async_hooks, etc.).
+  "compatibility_date": "2026-08-19",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // Assets estáticos del build. `.assetsignore` (en ./dist) excluye _worker.js.
+  // Las peticiones que no matchean un asset caen al Worker (SSR).
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS"
+  }
 }
