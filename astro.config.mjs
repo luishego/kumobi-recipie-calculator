@@ -2,15 +2,17 @@
 import { defineConfig } from 'astro/config';
 import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
-import node from '@astrojs/node';
+import cloudflare from '@astrojs/cloudflare';
 
 // Kumobi — Panel de Costeo de Recetas.
 // SSR obligatorio: rutas privadas protegidas por cookie de sesión en el middleware.
-// El adaptador (hosting) quedó abierto en fase 01; se usa Node standalone como
-// base portable. Sustituible por Vercel/Netlify sin tocar la app.
+// Hosting: Cloudflare Pages (runtime edge). La sesión es edge-native (jose /
+// Web Crypto, sin firebase-admin); ver src/lib/session.ts.
 export default defineConfig({
   output: 'server',
-  adapter: node({ mode: 'standalone' }),
+  // imageService: 'compile' → no usar sharp en el runtime edge (no hay imágenes
+  // optimizadas en runtime); evita el warning del adaptador.
+  adapter: cloudflare({ imageService: 'compile' }),
   integrations: [
     react(),
     tailwind({ applyBaseStyles: false }),

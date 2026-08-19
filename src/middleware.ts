@@ -1,8 +1,9 @@
-// Guard de sesión SSR (HU-01). Verifica la cookie de sesión (Admin SDK) en cada
-// request a rutas privadas. Sin cookie válida → redirección a /login.
-// Nunca se renderiza contenido privado antes de validar la sesión.
+// Guard de sesión SSR (HU-01) — edge-native (sin firebase-admin).
+// Verifica NUESTRA cookie de sesión (HS256) en cada request a rutas privadas.
+// Sin cookie válida → redirección a /login. Nunca se renderiza contenido
+// privado antes de validar la sesión.
 import { defineMiddleware } from 'astro:middleware';
-import { getAdminAuth } from './lib/firebase/admin';
+import { verifySessionToken, readEnv } from './lib/session';
 import { SESSION_COOKIE, PRIVATE_PATHS } from './lib/constants';
 
 function isPrivate(pathname: string): boolean {
@@ -17,20 +18,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   locals.user = null;
 
-  const sessionCookie = cookies.get(SESSION_COOKIE)?.value;
+  const cookie = cookies.get(SESSION_COOKIE)?.value;
+  const secret = readEnv(locals, 'SESSION_SECRET');
 
-  if (sessionCookie) {
-    try {
-      const decoded = await getAdminAuth().verifySessionCookie(sessionCookie, true);
-      locals.user = {
-        uid: decoded.uid,
-        email: decoded.email ?? null,
-        role: (decoded.role as string | undefined) ?? null,
-      };
-    } catch {
+  if (cookie && secret) {
+    const user = await verifySessionToken(cookie, secret);
+    if (user) {
+      locals.user = user;
+    } else {
       // Cookie inválida o expirada: se limpia y se trata como no autenticado.
       cookies.delete(SESSION_COOKIE, { path: '/' });
-      locals.user = null;
     }
   }
 

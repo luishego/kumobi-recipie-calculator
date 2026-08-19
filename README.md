@@ -7,18 +7,22 @@ Herramienta interna detrás de login (`noindex`). Español (México), moneda **M
 
 ## Stack
 
-- **Astro (SSR)** con adaptador Node (standalone) + islas **React** (`client:load`).
+- **Astro (SSR)** con adaptador **Cloudflare** (runtime edge) + islas **React** (`client:load`).
 - **Tailwind CSS** con tokens semánticos del sistema de diseño (fase 02).
 - **Firebase Web SDK v10** (Auth + Firestore) en el cliente.
-- **Firebase Admin SDK** en el servidor (cookies de sesión, guard SSR).
+- **Sesión edge-native con `jose`** (Web Crypto) en el servidor — **sin firebase-admin**.
 - **React Hook Form + Zod** en los formularios.
 
 ## Arquitectura relevante
 
-- **Auth / rutas privadas:** login cliente con `signInWithEmailAndPassword` → `idToken`
-  → `POST /api/session` lo intercambia por una **session cookie** (Admin SDK) →
-  `src/middleware.ts` verifica la cookie (`verifySessionCookie`) en cada ruta privada;
-  sin cookie válida → redirect a `/login`. Logout borra la cookie (`DELETE /api/session`).
+- **Auth / rutas privadas (edge-native, sin firebase-admin):** login cliente con
+  `signInWithEmailAndPassword` → `idToken` → `POST /api/session` **verifica el ID token
+  contra los certificados públicos de Google** (`jose` + Web Crypto) y acuña **nuestra
+  propia cookie de sesión** (JWT HS256 firmado con `SESSION_SECRET`). `src/middleware.ts`
+  verifica esa cookie en cada ruta privada; sin cookie válida → redirect a `/login`.
+  Logout borra la cookie (`DELETE /api/session`). Ver `src/lib/session.ts`.
+  (No hay revocación de sesión, a diferencia de `createSessionCookie`; aceptable para
+  herramienta interna, las Firestore Rules siguen exigiendo el rol.)
 - **La UI NO calcula ni persiste** `netCostPerUsageUnit`, los campos financieros de
   recetas (`calculatedCost`, `totalCost`, `costPerYieldUnit`, `foodCostPercentage`,
   `contributionMargin`) ni `requiresRecalculation`. Eso lo hacen **Cloud Functions**
@@ -117,6 +121,30 @@ registran `price_history`. Ver `functions/README.md` para instalar, compilar y d
 ```bash
 npm run set-claim -- correo@ejemplo.mx admin   # role: admin | chef | manager
 ```
+
+## Despliegue (Cloudflare Pages)
+
+Adaptador: `@astrojs/cloudflare` (`output: 'server'`). El comando de build es
+`npm run build` (genera `dist/` + el Worker). En el dashboard de Cloudflare Pages:
+
+**Variables de entorno (Production).** Dos grupos:
+
+- **Build (cliente) — las 6 `PUBLIC_FIREBASE_*`.** Astro las inyecta EN BUILD, así que
+  deben existir ANTES de compilar. Si las agregas después, hay que **re-desplegar**.
+- **Runtime (servidor):**
+  - `SESSION_SECRET` — secreto largo aleatorio para firmar la cookie de sesión.
+  - `SESSION_COOKIE_MAX_AGE_MS` — opcional (default 5 días).
+
+Ya **no** se necesitan `FIREBASE_ADMIN_*` ni el `serviceAccount.json` en el servidor
+(la sesión es edge-native).
+
+**Firebase Console → Authentication → Settings → Dominios autorizados:** agrega el
+dominio de producción (p. ej. `calculator.kumobi.com.mx`).
+
+> Nota: el adaptador habilita las *Astro Sessions* con un binding KV llamado `SESSION`.
+> Esta app **no** usa `Astro.session`, así que en la práctica no se accede. Si el deploy
+> fallara con *"Invalid binding `SESSION`"*, crea un KV namespace y bíndalo como `SESSION`
+> en Pages → Settings → Functions → KV namespace bindings.
 
 ## Estado de verificación
 
