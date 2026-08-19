@@ -25,6 +25,7 @@
     "firebase": "^10.14.1",
     "firebase-admin": "^12.7.0",
     "jose": "^6.2.9",
+    "lucide-react": "^1.32.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hook-form": "^7.54.2",

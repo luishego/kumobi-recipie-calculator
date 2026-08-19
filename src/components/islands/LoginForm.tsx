@@ -8,6 +8,8 @@ import { getFirebaseAuth } from '../../lib/firebase/client';
 import { FieldWrap, TextInput } from '../ui/Field';
 import { Button } from '../ui/Button';
 import { Alert } from '../ui/Alert';
+import { Eye, EyeOff } from 'lucide-react';
+
 
 const schema = z.object({
   email: z.string().min(1, 'Ingresa tu correo.').email('Correo no válido.'),
@@ -106,7 +108,7 @@ export default function LoginForm() {
             aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
             className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-text-muted hover:text-text-strong"
           >
-            {showPassword ? '🙈' : '👁'}
+            {showPassword ? <EyeOff size={24} color="gray" /> : <Eye size={24} color="black" />}
           </button>
         </div>
       </FieldWrap>
