@@ -1,0 +1,14 @@
+# Cloudflare Pages — Kumobi, Panel de Costeo de Recetas.
+#
+# ⚠️ `name` DEBE coincidir con el nombre EXACTO de tu proyecto de Pages
+# existente (el que tiene atado el dominio calculator.kumobi.com.mx). Si pones
+# otro, `wrangler pages deploy` creará un proyecto NUEVO sin el dominio.
+name = "kumobi-recipie-calculator"
+
+# Marca esto como proyecto de Pages y le dice a wrangler dónde está el build.
+pages_build_output_dir = "dist"
+
+# El adaptador de Astro para Cloudflare usa APIs de Node (p. ej. async_hooks);
+# `nodejs_compat` es necesario. Fecha reciente para habilitarlo correctamente.
+compatibility_date = "2026-08-19"
+compatibility_flags = ["nodejs_compat"]
