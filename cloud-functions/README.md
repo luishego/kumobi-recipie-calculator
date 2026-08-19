@@ -28,7 +28,7 @@ la receta y la re-guarda para que el cliente la recueste.
 ## Instalar y compilar
 
 ```bash
-cd functions
+cd cloud-functions
 npm install
 npm run build   # tsc → lib/
 ```

@@ -112,9 +112,11 @@ npm run test:watch
 
 ## Cloud Functions (propagación)
 
-En `functions/`. Marcan `requiresRecalculation` en cascada cuando cambia un insumo y
-registran `price_history`. Ver `functions/README.md` para instalar, compilar y desplegar
-(`firebase deploy --only functions`). Requiere Firebase CLI y plan Blaze.
+En `cloud-functions/` (renombrada desde `functions/` para no chocar con la carpeta
+reservada `functions/` de Cloudflare Pages). Marcan `requiresRecalculation` en cascada
+cuando cambia un insumo y registran `price_history`. Ver `cloud-functions/README.md`
+para instalar, compilar y desplegar (`firebase deploy --only functions`). Requiere
+Firebase CLI y plan Blaze.
 
 ## Asignar Custom Claims (usuarios)
 

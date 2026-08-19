@@ -1,7 +1,14 @@
 {
+  // Cloudflare Pages — Kumobi, Panel de Costeo de Recetas.
+  // `name` DEBE coincidir con el proyecto de Pages existente (con el dominio
+  // calculator.kumobi.com.mx). Confirmado: existe en la cuenta.
   "name": "kumobi-recipie-calculator",
+
+  // Directorio del build de Astro (adaptador Cloudflare, modo _worker.js).
+  // Para Pages se usa `pages_build_output_dir`, NO `assets` (eso es de Workers).
+  "pages_build_output_dir": "dist",
+
+  // El adaptador de Astro usa APIs de Node (async_hooks, etc.).
   "compatibility_date": "2026-08-19",
-  "assets": {
-    "directory": "./dist"
-  }
+  "compatibility_flags": ["nodejs_compat"]
 }
