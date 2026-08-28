@@ -3,6 +3,7 @@
 // La verificación de sesión ocurre en el middleware SSR; aquí ya hay `locals.user`.
 import '../styles/global.css';
 import LogoutButton from '../components/islands/LogoutButton.tsx';
+import MobileNav from '../components/islands/MobileNav.tsx';
 
 interface Props {
   title: string;
@@ -83,10 +84,18 @@ const initials = (user?.email ?? '?').slice(0, 2).toUpperCase();
         <header
           class="flex h-14 items-center justify-between border-b border-border-base bg-surface px-4 sm:px-6"
         >
-          <h1 class="text-sm font-semibold text-text-strong lg:hidden">Kumobi</h1>
-          <p class="hidden text-sm font-medium text-text-muted lg:block">{title}</p>
-          <div class="lg:hidden">
-            <LogoutButton client:load />
+          <div class="flex items-center gap-3">
+            <div class="lg:hidden">
+              <MobileNav
+                client:load
+                items={nav}
+                pathname={pathname}
+                email={user?.email ?? ''}
+                role={user?.role ?? ''}
+              />
+            </div>
+            <span class="text-sm font-semibold text-text-strong lg:hidden">Kumobi</span>
+            <p class="hidden text-sm font-medium text-text-muted lg:block">{title}</p>
           </div>
         </header>
         <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">

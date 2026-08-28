@@ -163,75 +163,142 @@ function RecipeTable({
   onDelete: (r: RecipeDocument) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border-base bg-surface shadow-card">
-      <table className="w-full text-sm">
-        <thead className="bg-app text-left text-xs text-text-muted">
-          <tr>
-            <th className="px-4 py-2 font-medium">Receta</th>
-            <th className="px-4 py-2 font-medium">Categoría</th>
-            <th className="px-4 py-2 font-medium">Tipo</th>
-            <th className="px-4 py-2 text-right font-medium">Costo/rend.</th>
-            <th className="px-4 py-2 font-medium">Food Cost</th>
-            <th className="px-4 py-2 text-right font-medium" />
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-base">
-          {rows.map((r) => {
-            const inUse = (usedBy.get(r.id) ?? []).length > 0;
-            return (
-              <tr key={r.id} className="hover:bg-app/60">
-                <td className="px-4 py-2.5 font-medium text-text-strong">
-                  {r.name}
+    <>
+      {/* Desktop: tabla */}
+      <div className="hidden overflow-x-auto rounded-lg border border-border-base bg-surface shadow-card lg:block">
+        <table className="w-full text-sm">
+          <thead className="bg-app text-left text-xs text-text-muted">
+            <tr>
+              <th className="px-4 py-2 font-medium">Receta</th>
+              <th className="px-4 py-2 font-medium">Categoría</th>
+              <th className="px-4 py-2 font-medium">Tipo</th>
+              <th className="px-4 py-2 text-right font-medium">Costo/rend.</th>
+              <th className="px-4 py-2 font-medium">Food Cost</th>
+              <th className="px-4 py-2 text-right font-medium" />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-base">
+            {rows.map((r) => {
+              const inUse = (usedBy.get(r.id) ?? []).length > 0;
+              return (
+                <tr key={r.id} className="hover:bg-app/60">
+                  <td className="px-4 py-2.5 font-medium text-text-strong">
+                    {r.name}
+                    {r.requiresRecalculation && (
+                      <span
+                        className="ml-2 rounded bg-fc-warn-bg px-1.5 py-0.5 text-xs text-fc-warn-text"
+                        title="Un insumo base cambió de precio; recostea este platillo"
+                      >
+                        ⚠ recálculo
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <CategoryBadge category={catById.get(r.categoryId)} />
+                  </td>
+                  <td className="px-4 py-2.5 text-text-muted">
+                    {r.isSubRecipe ? 'Sub-receta' : 'Platillo'}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular">
+                    {formatMXN(r.costPerYieldUnit)}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {r.isSubRecipe ? (
+                      <span className="text-xs text-text-muted">—</span>
+                    ) : (
+                      <FoodCostBadge percentage={r.foodCostPercentage} showLabel={false} />
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <div className="flex items-center justify-end gap-3">
+                      <a
+                        href={`/recetas/${r.id}`}
+                        className="text-primary hover:underline"
+                        aria-label={`Abrir ${r.name}`}
+                      >
+                        Abrir →
+                      </a>
+                      <button
+                        type="button"
+                        onClick={() => onDelete(r)}
+                        className="text-text-muted hover:text-danger"
+                        aria-label={`Eliminar ${r.name}`}
+                        title={inUse ? 'En uso por otras recetas' : 'Eliminar'}
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Móvil: tarjetas */}
+      <div className="flex flex-col gap-3 lg:hidden">
+        {rows.map((r) => {
+          const inUse = (usedBy.get(r.id) ?? []).length > 0;
+          return (
+            <div
+              key={r.id}
+              className="rounded-lg border border-border-base bg-surface p-4 shadow-card"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-text-strong">{r.name}</p>
                   {r.requiresRecalculation && (
-                    <span
-                      className="ml-2 rounded bg-fc-warn-bg px-1.5 py-0.5 text-xs text-fc-warn-text"
-                      title="Un insumo base cambió de precio; recostea este platillo"
-                    >
+                    <span className="mt-1 inline-block rounded bg-fc-warn-bg px-1.5 py-0.5 text-xs text-fc-warn-text">
                       ⚠ recálculo
                     </span>
                   )}
-                </td>
-                <td className="px-4 py-2.5">
-                  <CategoryBadge category={catById.get(r.categoryId)} />
-                </td>
-                <td className="px-4 py-2.5 text-text-muted">
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onDelete(r)}
+                  className="shrink-0 text-text-muted hover:text-danger"
+                  aria-label={`Eliminar ${r.name}`}
+                  title={inUse ? 'En uso por otras recetas' : 'Eliminar'}
+                >
+                  🗑
+                </button>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <CategoryBadge category={catById.get(r.categoryId)} />
+                <span className="text-xs text-text-muted">
                   {r.isSubRecipe ? 'Sub-receta' : 'Platillo'}
-                </td>
-                <td className="px-4 py-2.5 text-right tabular">
-                  {formatMXN(r.costPerYieldUnit)}
-                </td>
-                <td className="px-4 py-2.5">
-                  {r.isSubRecipe ? (
-                    <span className="text-xs text-text-muted">—</span>
-                  ) : (
-                    <FoodCostBadge percentage={r.foodCostPercentage} showLabel={false} />
-                  )}
-                </td>
-                <td className="px-4 py-2.5 text-right">
-                  <div className="flex items-center justify-end gap-3">
-                    <a
-                      href={`/recetas/${r.id}`}
-                      className="text-primary hover:underline"
-                      aria-label={`Abrir ${r.name}`}
-                    >
-                      Abrir →
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(r)}
-                      className="text-text-muted hover:text-danger"
-                      aria-label={`Eliminar ${r.name}`}
-                      title={inUse ? 'En uso por otras recetas' : 'Eliminar'}
-                    >
-                      🗑
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                </span>
+              </div>
+              <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <dt className="text-xs text-text-muted">Costo/rend.</dt>
+                  <dd className="tabular font-medium text-text-strong">
+                    {formatMXN(r.costPerYieldUnit)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Food Cost</dt>
+                  <dd>
+                    {r.isSubRecipe ? (
+                      <span className="text-xs text-text-muted">—</span>
+                    ) : (
+                      <FoodCostBadge percentage={r.foodCostPercentage} showLabel={false} />
+                    )}
+                  </dd>
+                </div>
+              </dl>
+              <a
+                href={`/recetas/${r.id}`}
+                className="mt-3 inline-block text-sm font-medium text-primary hover:underline"
+                aria-label={`Abrir ${r.name}`}
+              >
+                Abrir →
+              </a>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

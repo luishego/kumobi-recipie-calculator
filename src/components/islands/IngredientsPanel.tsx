@@ -309,61 +309,124 @@ function IngredientsTable({
   onDelete: (i: Ingredient) => void;
 }) {
   return (
-    <div className="overflow-x-auto rounded-lg border border-border-base bg-surface shadow-card">
-      <table className="w-full text-sm">
-        <thead className="sticky top-0 bg-app text-left text-xs text-text-muted">
-          <tr>
-            <th className="px-4 py-2 font-medium">Nombre</th>
-            <th className="px-4 py-2 font-medium">Categoría</th>
-            <th className="px-4 py-2 text-right font-medium">Compra</th>
-            <th className="px-4 py-2 text-right font-medium">Rendimiento</th>
-            <th className="px-4 py-2 text-right font-medium">Costo neto</th>
-            <th className="px-4 py-2 text-right font-medium">Acciones</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-border-base">
-          {rows.map((i) => {
-            const purchaseUnit = unitById.get(i.purchaseUnitId);
-            const usageUnit = unitById.get(i.usageUnitId);
-            return (
-              <tr key={i.id} className="hover:bg-app/60">
-                <td className="px-4 py-2.5 font-medium text-text-strong">{i.name}</td>
-                <td className="px-4 py-2.5">
-                  <CategoryBadge category={catById.get(i.categoryId)} />
-                </td>
-                <td className="px-4 py-2.5 text-right tabular">
-                  {formatMXN(i.purchasePrice)}
-                  {purchaseUnit ? `/${purchaseUnit.symbol}` : ''}
-                </td>
-                <td className="px-4 py-2.5 text-right tabular">
-                  {formatPercent(i.yieldPercentage)}
-                </td>
-                <td className="px-4 py-2.5 text-right font-medium text-text-strong tabular">
-                  {formatUnitCost(i.netCostPerUsageUnit, usageUnit?.symbol)}
-                </td>
-                <td className="px-4 py-2.5">
-                  <div className="flex justify-end gap-1">
-                    <button
-                      onClick={() => onEdit(i)}
-                      aria-label={`Editar ${i.name}`}
-                      className="rounded p-1 text-text-muted hover:bg-app hover:text-primary"
-                    >
-                      ✎
-                    </button>
-                    <button
-                      onClick={() => onDelete(i)}
-                      aria-label={`Eliminar ${i.name}`}
-                      className="rounded p-1 text-text-muted hover:bg-app hover:text-danger"
-                    >
-                      🗑
-                    </button>
+    <>
+      {/* Desktop: tabla */}
+      <div className="hidden overflow-x-auto rounded-lg border border-border-base bg-surface shadow-card lg:block">
+        <table className="w-full text-sm">
+          <thead className="sticky top-0 bg-app text-left text-xs text-text-muted">
+            <tr>
+              <th className="px-4 py-2 font-medium">Nombre</th>
+              <th className="px-4 py-2 font-medium">Categoría</th>
+              <th className="px-4 py-2 text-right font-medium">Compra</th>
+              <th className="px-4 py-2 text-right font-medium">Rendimiento</th>
+              <th className="px-4 py-2 text-right font-medium">Costo neto</th>
+              <th className="px-4 py-2 text-right font-medium">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border-base">
+            {rows.map((i) => {
+              const purchaseUnit = unitById.get(i.purchaseUnitId);
+              const usageUnit = unitById.get(i.usageUnitId);
+              return (
+                <tr key={i.id} className="hover:bg-app/60">
+                  <td className="px-4 py-2.5 font-medium text-text-strong">{i.name}</td>
+                  <td className="px-4 py-2.5">
+                    <CategoryBadge category={catById.get(i.categoryId)} />
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular">
+                    {formatMXN(i.purchasePrice)}
+                    {purchaseUnit ? `/${purchaseUnit.symbol}` : ''}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular">
+                    {formatPercent(i.yieldPercentage)}
+                  </td>
+                  <td className="px-4 py-2.5 text-right font-medium text-text-strong tabular">
+                    {formatUnitCost(i.netCostPerUsageUnit, usageUnit?.symbol)}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex justify-end gap-1">
+                      <button
+                        onClick={() => onEdit(i)}
+                        aria-label={`Editar ${i.name}`}
+                        className="rounded p-1 text-text-muted hover:bg-app hover:text-primary"
+                      >
+                        ✎
+                      </button>
+                      <button
+                        onClick={() => onDelete(i)}
+                        aria-label={`Eliminar ${i.name}`}
+                        className="rounded p-1 text-text-muted hover:bg-app hover:text-danger"
+                      >
+                        🗑
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Móvil: tarjetas */}
+      <div className="flex flex-col gap-3 lg:hidden">
+        {rows.map((i) => {
+          const purchaseUnit = unitById.get(i.purchaseUnitId);
+          const usageUnit = unitById.get(i.usageUnitId);
+          return (
+            <div
+              key={i.id}
+              className="rounded-lg border border-border-base bg-surface p-4 shadow-card"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <p className="font-medium text-text-strong">{i.name}</p>
+                  <div className="mt-1">
+                    <CategoryBadge category={catById.get(i.categoryId)} />
                   </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => onEdit(i)}
+                    aria-label={`Editar ${i.name}`}
+                    className="rounded p-1 text-text-muted hover:bg-app hover:text-primary"
+                  >
+                    ✎
+                  </button>
+                  <button
+                    onClick={() => onDelete(i)}
+                    aria-label={`Eliminar ${i.name}`}
+                    className="rounded p-1 text-text-muted hover:bg-app hover:text-danger"
+                  >
+                    🗑
+                  </button>
+                </div>
+              </div>
+              <dl className="mt-3 grid grid-cols-3 gap-2 text-sm">
+                <div>
+                  <dt className="text-xs text-text-muted">Compra</dt>
+                  <dd className="tabular font-medium text-text-strong">
+                    {formatMXN(i.purchasePrice)}
+                    {purchaseUnit ? `/${purchaseUnit.symbol}` : ''}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Rendimiento</dt>
+                  <dd className="tabular font-medium text-text-strong">
+                    {formatPercent(i.yieldPercentage)}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-xs text-text-muted">Costo neto</dt>
+                  <dd className="tabular font-medium text-text-strong">
+                    {formatUnitCost(i.netCostPerUsageUnit, usageUnit?.symbol)}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }
