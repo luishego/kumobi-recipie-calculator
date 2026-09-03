@@ -12,7 +12,21 @@ export default defineConfig({
   output: 'server',
   // imageService: 'compile' → no usar sharp en el runtime edge (no hay imágenes
   // optimizadas en runtime); evita el warning del adaptador.
-  adapter: cloudflare({ imageService: 'compile' }),
+  // `platformProxy` expone los bindings de Cloudflare (D1, R2) durante
+  // `astro dev`; sin él, `locals.runtime.env` viene vacío en local y los
+  // endpoints de ventas responden "falta el binding".
+  //
+  // `remoteBindings: false` es necesario: el binding de D1 tiene `remote: true`
+  // en wrangler.jsonc, y con los bindings remotos activos el adaptador intenta
+  // abrir una sesión de vista previa contra Cloudflare que el token actual no
+  // puede crear — y `astro dev` ni siquiera arranca. Con esto, el desarrollo
+  // usa una copia LOCAL de D1 (`.wrangler/state`), que además es más seguro.
+  // El `remote: true` de wrangler.jsonc sigue vigente para el resto de las
+  // herramientas y para el despliegue.
+  adapter: cloudflare({
+    imageService: 'compile',
+    platformProxy: { enabled: true, remoteBindings: false },
+  }),
   integrations: [
     react(),
     tailwind({ applyBaseStyles: false }),

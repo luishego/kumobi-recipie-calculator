@@ -1,20 +1,39 @@
 {
-  // Cloudflare Workers (Static Assets) — Kumobi, Panel de Costeo de Recetas.
-  // Se despliega con `wrangler deploy`.
-  "name": "kumobi-recipie-calculator",
-
-  // Entrypoint del Worker SSR que genera el adaptador de Astro.
-  // SIN esto, solo se sirven assets estáticos y las rutas SSR dan 404.
-  "main": "./dist/_worker.js/index.js",
-
-  // El adaptador de Astro usa APIs de Node (async_hooks, etc.).
-  "compatibility_date": "2026-08-19",
-  "compatibility_flags": ["nodejs_compat"],
-
-  // Assets estáticos del build. `.assetsignore` (en ./dist) excluye _worker.js.
-  // Las peticiones que no matchean un asset caen al Worker (SSR).
-  "assets": {
-    "directory": "./dist",
-    "binding": "ASSETS"
-  }
+	// Cloudflare Workers (Static Assets) — Kumobi, Panel de Costeo de Recetas.
+	// Se despliega con `wrangler deploy`.
+	"name": "kumobi-recipie-calculator",
+	// Entrypoint del Worker SSR que genera el adaptador de Astro.
+	// SIN esto, solo se sirven assets estáticos y las rutas SSR dan 404.
+	"main": "./dist/_worker.js/index.js",
+	// El adaptador de Astro usa APIs de Node (async_hooks, etc.).
+	"compatibility_date": "2026-08-19",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	// Assets estáticos del build. `.assetsignore` (en ./dist) excluye _worker.js.
+	// Las peticiones que no matchean un asset caen al Worker (SSR).
+	"assets": {
+		"directory": "./dist",
+		"binding": "ASSETS"
+	},
+	// Ventas (épica 02). Dos recursos INDEPENDIENTES, cada uno con su binding:
+	// dentro del Worker llegan como `env.kumobi_ventas` y `env.kumobi_ventas_raw`.
+	// Cloudflare no los relaciona entre sí; el vínculo entre un ticket y su
+	// payload crudo lo pone la columna `raw_object_key` de `sales_receipts`.
+	"d1_databases": [
+		{
+			"binding": "kumobi_ventas",
+			"database_name": "kumobi-ventas",
+			"database_id": "231ea527-026b-437c-910c-e3bd7dbc0f83",
+			"remote": true
+		}
+	],
+	// Archivo del payload crudo del proveedor (§5.9): permite re-normalizar sin
+	// volver a descargar, y conserva lo que el POS afirmó en su momento.
+	"r2_buckets": [
+		{
+			"binding": "kumobi_ventas_raw",
+			"bucket_name": "kumobi-ventas-raw"
+		}
+	]
 }

@@ -1,0 +1,21 @@
+-- ────────────────────────────────────────────────────────────────────────────
+-- Límite de sucursales activas por inquilino.
+--
+-- Motivo: cada sucursal activa sincroniza a diario y es lo que consume la base.
+-- Con el dimensionamiento de §5.1 de la épica —~70 MB por sucursal-año, sobre
+-- 500 MB por base en el plan gratuito de D1— el límite por defecto sale de una
+-- cuenta, no de un número inventado:
+--
+--     3 sucursales × 70 MB/año ≈ 210 MB/año  →  ~2.4 años de margen
+--     5 sucursales × 70 MB/año ≈ 350 MB/año  →  ~1.4 años
+--
+-- Se limitan las sucursales ACTIVAS, no las cuentas ni las descubiertas: una
+-- sucursal inactiva no sincroniza y por lo tanto no consume. Así, descubrir
+-- sucursales nunca se rechaza —no se pierde información— y es el administrador
+-- quien decide cuáles de ellas mantiene activas.
+--
+-- Es por inquilino y configurable: subirlo es un UPDATE, y al pasar a plan de
+-- pago (10 GB por base) deja de ser una restricción relevante.
+-- ────────────────────────────────────────────────────────────────────────────
+
+ALTER TABLE tenants ADD COLUMN max_active_stores INTEGER NOT NULL DEFAULT 3;

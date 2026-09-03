@@ -33,8 +33,15 @@ export default function MobileNav({ items, pathname, email, role }: Props) {
     };
   }, [open]);
 
-  const isActive = (href: string) =>
+  // Misma regla que el sidebar: gana el enlace más específico que cubre la
+  // ruta, para que "/ventas" no se marque a la vez que "/ventas/mapeo".
+  const cubre = (href: string) =>
     href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
+  const hrefActivo = items
+    .map((item) => item.href)
+    .filter(cubre)
+    .sort((a, b) => b.length - a.length)[0];
+  const isActive = (href: string) => href === hrefActivo;
   const initials = (email || '?').slice(0, 2).toUpperCase();
 
   return (

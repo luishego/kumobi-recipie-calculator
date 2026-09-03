@@ -1,0 +1,9 @@
+---
+// Conciliación contra el Back Office (épica 02, HU-16). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import ConciliacionPanel from '../../components/islands/ConciliacionPanel.tsx';
+---
+
+<DashboardLayout title="Conciliación de ventas">
+  <ConciliacionPanel client:load />
+</DashboardLayout>

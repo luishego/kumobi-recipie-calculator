@@ -1,0 +1,9 @@
+---
+// Resumen de ventas por día (épica 02, HU-17). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import VentasPanel from '../../components/islands/VentasPanel.tsx';
+---
+
+<DashboardLayout title="Ventas">
+  <VentasPanel client:load />
+</DashboardLayout>

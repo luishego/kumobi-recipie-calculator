@@ -10,6 +10,10 @@ dist/
 .env.*
 .env.example
 
+# Secretos de desarrollo de wrangler (mismo caso que .env)
+.dev.vars
+.dev.vars.*
+
 # Credenciales de cuenta de servicio de Firebase Admin (SECRETO)
 *serviceAccount*.json
 *service-account*.json

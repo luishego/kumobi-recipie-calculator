@@ -19,6 +19,15 @@ export interface SessionUser {
   uid: string;
   email: string | null;
   role: string | null;
+  /**
+   * Inquilino al que pertenece el usuario (épica 02 §5.8).
+   *
+   * `null` significa "la sesión no lo trae": o el usuario aún no tiene el claim,
+   * o la cookie se acuñó antes de que este campo existiera. Quien necesite un
+   * inquilino concreto debe pasar por `resolveTenantId` (src/lib/sales/tenant.ts),
+   * que aplica el periodo de gracia; aquí se refleja la realidad sin maquillarla.
+   */
+  tenantId: string | null;
 }
 
 /** Lee una variable de entorno en Cloudflare (runtime) o en dev/build (import.meta.env). */
@@ -76,6 +85,7 @@ export async function verifyFirebaseIdToken(
     uid: payload.sub,
     email: (payload.email as string | undefined) ?? null,
     role: (payload.role as string | undefined) ?? null,
+    tenantId: (payload.tenantId as string | undefined) ?? null,
   };
 }
 
@@ -91,7 +101,7 @@ export async function mintSessionToken(
   maxAgeSec: number,
 ): Promise<string> {
   const nowSec = Math.floor(Date.now() / 1000);
-  return await new SignJWT({ email: user.email, role: user.role })
+  return await new SignJWT({ email: user.email, role: user.role, tenantId: user.tenantId })
     .setProtectedHeader({ alg: 'HS256', typ: 'JWT' })
     .setSubject(user.uid)
     .setIssuedAt(nowSec)
@@ -113,6 +123,10 @@ export async function verifySessionToken(
       uid: payload.sub,
       email: (payload.email as string | undefined) ?? null,
       role: (payload.role as string | undefined) ?? null,
+      // Las cookies acuñadas antes de la épica 02 no traen este campo. Se leen
+      // como `null` en vez de rechazarse: invalidar todas las sesiones vivas al
+      // desplegar sacaría del panel a quien estuviera trabajando.
+      tenantId: (payload.tenantId as string | undefined) ?? null,
     };
   } catch {
     return null;

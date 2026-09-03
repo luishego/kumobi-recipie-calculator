@@ -1,0 +1,9 @@
+---
+// Cuentas de POS conectadas (épica 02, HU-06 y HU-07). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import SalesAccountsPanel from '../../components/islands/SalesAccountsPanel.tsx';
+---
+
+<DashboardLayout title="Cuentas de venta">
+  <SalesAccountsPanel client:load />
+</DashboardLayout>

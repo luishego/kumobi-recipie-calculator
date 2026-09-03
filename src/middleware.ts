@@ -36,8 +36,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return redirect('/');
   }
 
-  // Ruta privada sin sesión → login.
+  // Ruta privada sin sesión.
   if (isPrivate(pathname) && !locals.user) {
+    // La API responde JSON, no redirección: un `fetch` desde una isla seguiría
+    // el 302, recibiría el HTML del login y fallaría al parsear, mostrando un
+    // error incomprensible en vez de "tu sesión expiró".
+    if (pathname.startsWith('/api/')) {
+      return new Response(JSON.stringify({ error: 'Sesión requerida.' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      });
+    }
     return redirect('/login');
   }
 

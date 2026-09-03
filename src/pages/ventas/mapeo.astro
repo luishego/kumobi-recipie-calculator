@@ -1,0 +1,9 @@
+---
+// Mapeo de ítems del POS ↔ recetas (épica 02, HU-11). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import MapeoPanel from '../../components/islands/MapeoPanel.tsx';
+---
+
+<DashboardLayout title="Mapeo de ítems">
+  <MapeoPanel client:load />
+</DashboardLayout>

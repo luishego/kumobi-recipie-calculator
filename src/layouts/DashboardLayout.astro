@@ -16,11 +16,29 @@ const nav = [
   { href: '/', label: 'Dashboard' },
   { href: '/insumos', label: 'Insumos' },
   { href: '/recetas', label: 'Recetas' },
+  // "Ventas" es ahora el resumen (lo que mira el negocio); las cuentas de POS
+  // son plomería de administración y pasan a llamarse por lo que son.
+  { href: '/ventas', label: 'Ventas' },
+  // El mapeo es tarea de catálogo (la hace quien conoce la carta), así que va
+  // junto al resumen y no con la plomería de administración.
+  { href: '/ventas/mapeo', label: 'Mapeo de ítems' },
+  { href: '/ventas/cuentas', label: 'Cuentas de venta' },
+  { href: '/ventas/conciliacion', label: 'Conciliación' },
 ];
 
+// Activo = el enlace MÁS ESPECÍFICO que cubre la ruta actual. Sin esa segunda
+// condición, "/ventas" y "/ventas/mapeo" se marcarían los dos a la vez, porque
+// el primero es prefijo del segundo; con tres páginas bajo /ventas ya se nota.
+const cubre = (href: string) =>
+  href === '/' ? pathname === '/' : pathname === href || pathname.startsWith(href + '/');
+
+const hrefActivo = nav
+  .map((item) => item.href)
+  .filter(cubre)
+  .sort((a, b) => b.length - a.length)[0];
+
 function isActive(href: string) {
-  if (href === '/') return pathname === '/';
-  return pathname === href || pathname.startsWith(href + '/');
+  return href === hrefActivo;
 }
 
 const initials = (user?.email ?? '?').slice(0, 2).toUpperCase();

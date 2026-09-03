@@ -3,10 +3,13 @@
 // Uso local (no forma parte del runtime de la app). Requiere el JSON de
 // cuenta de servicio (el mismo secreto que usa el SSR).
 //
-//   node scripts/set-claim.mjs <email> <role>
+//   node scripts/set-claim.mjs <email> <role> [tenantId]
 //   node scripts/set-claim.mjs chef@kumobi.mx admin
+//   node scripts/set-claim.mjs chef@otro.mx admin tnt_otro
 //
 // role válido: admin | chef | manager
+// tenantId: inquilino al que pertenece el usuario (épica 02 §5.8).
+//   Por defecto `tnt_kumobi`, que es el único inquilino que existe hoy.
 //
 // Fuente de credenciales (en este orden):
 //   1) FIREBASE_ADMIN_CREDENTIALS_FILE (ruta al JSON)  — si no, ...
@@ -18,12 +21,15 @@ import { initializeApp, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 const VALID_ROLES = ['admin', 'chef', 'manager'];
+const DEFAULT_TENANT = 'tnt_kumobi';
 
-const [, , email, role] = process.argv;
+const [, , email, role, tenantArg] = process.argv;
+const tenantId = tenantArg || DEFAULT_TENANT;
 
 if (!email || !role) {
-  console.error('Uso: node scripts/set-claim.mjs <email> <role>');
+  console.error('Uso: node scripts/set-claim.mjs <email> <role> [tenantId]');
   console.error('  role válido: admin | chef | manager');
+  console.error(`  tenantId por defecto: ${DEFAULT_TENANT}`);
   process.exit(1);
 }
 if (!VALID_ROLES.includes(role)) {
@@ -52,8 +58,10 @@ try {
   const user = await auth.getUserByEmail(email);
   // Conserva cualquier otro claim existente y fija/actualiza role.
   const existing = user.customClaims || {};
-  await auth.setCustomUserClaims(user.uid, { ...existing, role });
-  console.log(`✓ Claim asignado: ${email} (uid ${user.uid}) → role="${role}"`);
+  await auth.setCustomUserClaims(user.uid, { ...existing, role, tenantId });
+  console.log(
+    `✓ Claims asignados: ${email} (uid ${user.uid}) → role="${role}", tenantId="${tenantId}"`,
+  );
   console.log('  Nota: el usuario debe cerrar y volver a iniciar sesión (o refrescar');
   console.log('  el idToken) para que el nuevo claim surta efecto.');
   process.exit(0);

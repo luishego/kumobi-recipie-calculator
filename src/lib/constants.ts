@@ -19,4 +19,4 @@ export const COLLECTIONS = {
 export const SESSION_COOKIE = 'kumobi_session';
 
 /** Rutas privadas protegidas por el middleware SSR. */
-export const PRIVATE_PATHS = ['/', '/insumos', '/recetas'];
+export const PRIVATE_PATHS = ['/', '/insumos', '/recetas', '/ventas', '/api/sales'];

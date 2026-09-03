@@ -1,0 +1,49 @@
+{
+  // Worker de sincronización de ventas (épica 02). Separado del Worker de la
+  // app a propósito: ver la cabecera de index.ts.
+  //
+  // Despliegue:  npx wrangler deploy --config workers/sync/wrangler.jsonc
+  // Secret:      npx wrangler secret put SALES_TOKEN_KEY --name kumobi-sync
+  //              (debe ser EL MISMO valor que el de la app: la app cifra los
+  //               tokens y este Worker los descifra)
+  // Prueba:      npx wrangler dev --config workers/sync/wrangler.jsonc --test-scheduled
+  //              y luego  curl "http://127.0.0.1:8787/__scheduled"
+  //
+  // ⚠️ En LOCAL, miniflare le da a cada archivo de configuración su propio
+  //    estado (`.wrangler/state` junto al config), así que este Worker NO ve la
+  //    base local de la app: da "no such table: tenants". `--persist-to` para
+  //    compartirla no funcionó en Windows. No afecta a producción, donde ambos
+  //    Workers apuntan a la misma D1 por `database_id`. Para probar la lógica
+  //    de sincronización usa las pruebas de `src/lib/sales/sync/`, que corren
+  //    contra una base sembrada.
+  "name": "kumobi-sync",
+  "main": "index.ts",
+  "compatibility_date": "2026-08-19",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // 09:00 UTC = 03:00 hora de México. México no observa horario de verano desde
+  // 2022, así que esta expresión no se desfasa por temporada.
+  "triggers": {
+    "crons": ["0 9 * * *"]
+  },
+
+  // Los MISMOS recursos que usa la app. Cada uno con su binding; son
+  // independientes entre sí.
+  "d1_databases": [
+    {
+      "binding": "kumobi_ventas",
+      "database_name": "kumobi-ventas",
+      "database_id": "231ea527-026b-437c-910c-e3bd7dbc0f83"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "kumobi_ventas_raw",
+      "bucket_name": "kumobi-ventas-raw"
+    }
+  ],
+
+  "observability": {
+    "enabled": true
+  }
+}
