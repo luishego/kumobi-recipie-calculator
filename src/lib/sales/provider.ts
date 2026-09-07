@@ -38,6 +38,13 @@ export interface FetchReceiptsParams {
   updatedSince?: string;
   /** Descarga inicial: tickets CREADOS desde este instante. */
   createdSince?: string;
+  /**
+   * Re-sincronización de un rango (HU-15): límite superior EXCLUSIVO por fecha
+   * de creación. Sin él, "repara del 1 al 3 de agosto" bajaría todo el
+   * histórico desde el 1 de agosto, que es justo lo que HU-15 existe para
+   * evitar —tapar un hueco sin rehacer el resto—.
+   */
+  createdBefore?: string;
   /** Continuación. Cuando viene, reemplaza a los demás filtros. */
   cursor?: string;
   /** Máximo 250; el proveedor usa 50 por defecto. */

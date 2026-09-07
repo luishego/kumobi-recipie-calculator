@@ -28,6 +28,24 @@ export interface SyncStateRow {
   backfillThrough: string | null;
 }
 
+/** Una corrida de la bitácora, tal como la lee la pantalla de HU-14. */
+export interface SyncRunRow {
+  id: string;
+  storeId: string;
+  kind: RunKind;
+  startedAt: string;
+  finishedAt: string | null;
+  status: RunStatus;
+  requestedFrom: string;
+  cutoffAt: string;
+  pagesFetched: number;
+  receiptsUpserted: number;
+  linesUpserted: number;
+  errorCode: string | null;
+  errorDetail: string | null;
+  triggeredBy: string | null;
+}
+
 export interface RunCounts {
   pagesFetched: number;
   receiptsUpserted: number;
@@ -215,6 +233,43 @@ export function createSyncStateRepo(db: D1Database, tenantId: string) {
           error?.code ?? null, error?.detail?.slice(0, 500) ?? null, runId, tenantId,
         )
         .run();
+    },
+
+    /**
+     * Bitácora de TODO el inquilino, no de una sucursal.
+     *
+     * Es la consulta que responde "¿por qué hoy no entró nada?" sin tener que
+     * ir sucursal por sucursal, que es exactamente lo que pide HU-14. Se apoya
+     * en `idx_runs_tenant (tenant_id, started_at DESC)`.
+     */
+    async listAllRuns(limit = 50): Promise<SyncRunRow[]> {
+      const res = await db
+        .prepare(
+          `SELECT id, store_id, kind, started_at, finished_at, status, requested_from,
+                  cutoff_at, pages_fetched, receipts_upserted, lines_upserted,
+                  error_code, error_detail, triggered_by
+             FROM sync_runs WHERE tenant_id = ?
+            ORDER BY started_at DESC LIMIT ?`,
+        )
+        .bind(tenantId, limit)
+        .all<Record<string, unknown>>();
+
+      return (res.results ?? []).map((r) => ({
+        id: r.id as string,
+        storeId: r.store_id as string,
+        kind: r.kind as RunKind,
+        startedAt: r.started_at as string,
+        finishedAt: (r.finished_at as string) ?? null,
+        status: r.status as RunStatus,
+        requestedFrom: r.requested_from as string,
+        cutoffAt: r.cutoff_at as string,
+        pagesFetched: (r.pages_fetched as number) ?? 0,
+        receiptsUpserted: (r.receipts_upserted as number) ?? 0,
+        linesUpserted: (r.lines_upserted as number) ?? 0,
+        errorCode: (r.error_code as string) ?? null,
+        errorDetail: (r.error_detail as string) ?? null,
+        triggeredBy: (r.triggered_by as string) ?? null,
+      }));
     },
 
     async listRuns(storeId: string, limit = 20) {

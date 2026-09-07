@@ -7,7 +7,7 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { createRepo, type SalesRepo } from './repo';
 import { resolveTenantId } from './tenant';
-import { importMasterKey } from './crypto';
+import { importMasterKey, SalesCryptoError } from './crypto';
 
 /** Error con estado HTTP, para responder sin `try/catch` anidados. */
 export class HttpError extends Error {
@@ -35,6 +35,28 @@ export function errorResponse(err: unknown): Response {
   if (err instanceof HttpError) {
     return json({ error: err.message, code: err.code }, err.status);
   }
+
+  // Los fallos de cifrado traen un mensaje que dice exactamente qué revisar, y
+  // aplanarlos a "Error interno del servidor" tira justo el dato accionable:
+  // quien ve el error se queda sin saber que la causa probable es una llave
+  // desajustada. Es el mismo error que se cometió al dar de alta una cuenta,
+  // donde el detalle del proveedor se sustituía por uno genérico y el
+  // `Illegal invocation` real nunca llegaba a quien tenía que diagnosticarlo.
+  //
+  // Los dos códigos no son la misma situación y no comparten estado HTTP:
+  //   · BAD_KEY → configuración del servidor (falta el secret, o no mide 32
+  //     bytes). Es culpa nuestra y no se arregla desde el panel: 500, pero con
+  //     el mensaje visible para quien pueda desplegar el arreglo.
+  //   · DECRYPT_FAILED → lo guardado no se puede descifrar con la llave actual.
+  //     Hay una acción concreta que lo resuelve, así que es 409 y no 500.
+  //
+  // Ninguno de los dos marca la cuenta como INVALID_TOKEN: una llave que no
+  // descifra es un problema nuestro, no del token del cliente.
+  if (err instanceof SalesCryptoError) {
+    console.error('[api/sales] fallo de cifrado:', err);
+    return json({ error: err.message, code: err.code }, err.code === 'BAD_KEY' ? 500 : 409);
+  }
+
   console.error('[api/sales] error no controlado:', err);
   return json({ error: 'Error interno del servidor.' }, 500);
 }

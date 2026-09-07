@@ -1,0 +1,9 @@
+---
+// Estado de sincronización, cuota y bitácora (épica 02, HU-14 y HU-15). Ruta privada.
+import DashboardLayout from '../../layouts/DashboardLayout.astro';
+import EstadoSyncPanel from '../../components/islands/EstadoSyncPanel.tsx';
+---
+
+<DashboardLayout title="Estado de sincronización">
+  <EstadoSyncPanel client:load />
+</DashboardLayout>

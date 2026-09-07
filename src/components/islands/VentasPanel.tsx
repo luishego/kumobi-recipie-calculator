@@ -11,6 +11,7 @@ import { Button } from '../ui/Button';
 import { FieldWrap, Select, TextInput } from '../ui/Field';
 import { EmptyState, ErrorState, TableSkeleton } from '../ui/states';
 import { formatMxn } from '../../lib/sales/money';
+import { haceDiasLocal, hoyLocal } from '../../lib/format';
 import type { DailyTotals } from '../../lib/sales/aggregate';
 
 interface Sucursal {
@@ -19,9 +20,8 @@ interface Sucursal {
   active: boolean;
 }
 
-const hoy = () => new Date().toISOString().slice(0, 10);
-const haceDias = (n: number) =>
-  new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+const hoy = hoyLocal;
+const haceDias = haceDiasLocal;
 
 /** "2026-08-30" → "sáb 30 ago". Sin `new Date(iso)` para no caer en UTC. */
 function diaLegible(businessDate: string): string {

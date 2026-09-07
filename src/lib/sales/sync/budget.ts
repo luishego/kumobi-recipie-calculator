@@ -54,6 +54,31 @@ export async function consumeBudget(
     .run();
 }
 
+/** Umbral de §5.1 a partir del cual conviene migrar a plan de pago. */
+export const DB_SIZE_WARN_BYTES = 400 * 1024 * 1024;
+
+/** Límite de tamaño por base en el plan gratuito de D1. */
+export const DB_SIZE_LIMIT_BYTES = 500 * 1024 * 1024;
+
+/**
+ * Tamaño actual de la base, en bytes.
+ *
+ * D1 lo devuelve en el `meta` de cualquier consulta (`size_after`); no hay
+ * forma de preguntarlo con SQL desde dentro de un Worker —`dbstat` no está
+ * disponible—. Si el runtime no lo trae, se devuelve `null` y la pantalla dice
+ * "no disponible": es preferible a inventar una cifra sobre la que alguien
+ * tomaría la decisión de migrar de plan.
+ */
+export async function dbSizeBytes(db: D1Database): Promise<number | null> {
+  try {
+    const res = await db.prepare('SELECT 1').all();
+    const size = (res.meta as { size_after?: unknown } | undefined)?.size_after;
+    return typeof size === 'number' && Number.isFinite(size) ? size : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * ¿Cabe una página más?
  *

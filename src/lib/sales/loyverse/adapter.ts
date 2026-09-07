@@ -134,6 +134,7 @@ export class LoyverseAdapter implements SalesProvider {
           // tickets editados, reembolsados o cancelados después de crearse.
           updated_at_min: params.updatedSince,
           created_at_min: params.createdSince,
+          created_at_max: params.createdBefore,
         };
 
     const raw = await this.request<{ receipts?: LoyverseReceipt[]; cursor?: string | null }>(
