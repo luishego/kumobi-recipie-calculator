@@ -24,7 +24,7 @@
   // 09:00 UTC = 03:00 hora de México. México no observa horario de verano desde
   // 2022, así que esta expresión no se desfasa por temporada.
   "triggers": {
-    "crons": ["0 9 * * *"]
+    "crons": ["0 3 * * *"]
   },
 
   // Los MISMOS recursos que usa la app. Cada uno con su binding; son
