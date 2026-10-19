@@ -109,6 +109,17 @@ describe('receiptsByDay', () => {
     );
   });
 
+  it('cada ticket trae sus renglones (para el desplegable)', async () => {
+    const recibos = await repo.receiptsByDay('2026-06-09');
+    const conRenglones = recibos.filter((r) => r.lines.length > 0);
+    expect(conRenglones.length).toBeGreaterThan(0);
+    for (const l of conRenglones[0]!.lines) {
+      expect(typeof l.itemName).toBe('string');
+      expect(typeof l.totalCents).toBe('number');
+      expect(typeof l.quantity).toBe('number');
+    }
+  });
+
   it('aísla por inquilino: otro inquilino no ve estos tickets', async () => {
     const otro = createRepo(db.d1, 'tnt_otro');
     expect(await otro.receiptsByDay('2026-06-09')).toEqual([]);

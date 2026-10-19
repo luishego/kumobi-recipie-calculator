@@ -19,6 +19,16 @@ export interface UpsertResult {
   lines: number;
 }
 
+/** Un renglón del ticket, para el desplegable de detalle. */
+export interface ReceiptLineSummary {
+  itemName: string;
+  variantName: string | null;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  totalDiscountCents: number;
+}
+
 /** Un ticket para la vista de detalle de un día (HU-17). Incluye la sucursal. */
 export interface ReceiptSummary {
   id: string;
@@ -35,6 +45,8 @@ export interface ReceiptSummary {
   storeName: string;
   /** Zona de la sucursal, para formatear la hora sin caer en UTC. */
   storeTimezone: string;
+  /** Renglones del ticket (los productos vendidos), para el desplegable. */
+  lines: ReceiptLineSummary[];
 }
 
 interface FilaReciboDia {
@@ -51,6 +63,28 @@ interface FilaReciboDia {
   store_name: string;
   store_timezone: string;
 }
+
+interface FilaRenglonDia {
+  receipt_id: string;
+  item_name: string;
+  variant_name: string | null;
+  quantity: number;
+  unit_price_cents: number;
+  total_cents: number;
+  total_discount_cents: number;
+}
+
+// Renglones del día, para adjuntarlos a su ticket sin una ida y vuelta por
+// recibo. Se filtran por los MISMOS criterios que los tickets (día + sucursal);
+// los renglones de un ticket cancelado simplemente no encuentran a quién
+// adjuntarse (su recibo no está en el resultado) y se ignoran.
+const RENGLONES_POR_DIA = `
+SELECT receipt_id, item_name, variant_name, quantity,
+       unit_price_cents, total_cents, total_discount_cents
+  FROM sales_receipt_lines
+ WHERE tenant_id = ?
+   AND business_date = ?{{FILTRO}}
+ ORDER BY receipt_id, line_index`;
 
 // Los cancelados se excluyen, igual que en los totales del día (§8): así los
 // tickets mostrados cuadran con la cifra sobre la que se hizo clic.
@@ -193,14 +227,31 @@ export function createReceiptsRepo(db: D1Database, tenantId: string) {
       opts: { storeId?: string } = {},
     ): Promise<ReceiptSummary[]> {
       const filtro = opts.storeId ? ' AND r.store_id = ?' : '';
+      const filtroRenglones = opts.storeId ? ' AND store_id = ?' : '';
       const args = opts.storeId
         ? [tenantId, businessDate, opts.storeId]
         : [tenantId, businessDate];
-      const res = await db
-        .prepare(RECIBOS_POR_DIA.replace('{{FILTRO}}', filtro))
-        .bind(...args)
-        .all<FilaReciboDia>();
-      return (res.results ?? []).map((f) => ({
+
+      const [recibos, renglones] = await Promise.all([
+        db.prepare(RECIBOS_POR_DIA.replace('{{FILTRO}}', filtro)).bind(...args).all<FilaReciboDia>(),
+        db.prepare(RENGLONES_POR_DIA.replace('{{FILTRO}}', filtroRenglones)).bind(...args).all<FilaRenglonDia>(),
+      ]);
+
+      const porRecibo = new Map<string, ReceiptLineSummary[]>();
+      for (const l of renglones.results ?? []) {
+        const arr = porRecibo.get(l.receipt_id) ?? [];
+        arr.push({
+          itemName: l.item_name,
+          variantName: l.variant_name,
+          quantity: l.quantity,
+          unitPriceCents: l.unit_price_cents,
+          totalCents: l.total_cents,
+          totalDiscountCents: l.total_discount_cents,
+        });
+        porRecibo.set(l.receipt_id, arr);
+      }
+
+      return (recibos.results ?? []).map((f) => ({
         id: f.id,
         receiptNumber: f.receipt_number,
         receiptType: f.receipt_type,
@@ -213,6 +264,7 @@ export function createReceiptsRepo(db: D1Database, tenantId: string) {
         storeId: f.store_id,
         storeName: f.store_name,
         storeTimezone: f.store_timezone,
+        lines: porRecibo.get(f.id) ?? [],
       }));
     },
   };

@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../ui/Button';
 import { FieldWrap, Select, TextInput } from '../ui/Field';
+import { Modal } from '../ui/Modal';
 import { EmptyState, ErrorState, TableSkeleton } from '../ui/states';
 import { formatMxn } from '../../lib/sales/money';
 import { haceDiasLocal, hoyLocal } from '../../lib/format';
@@ -18,6 +19,16 @@ interface Sucursal {
   id: string;
   name: string;
   active: boolean;
+}
+
+/** Un renglón del ticket (producto vendido). */
+interface Linea {
+  itemName: string;
+  variantName: string | null;
+  quantity: number;
+  unitPriceCents: number;
+  totalCents: number;
+  totalDiscountCents: number;
 }
 
 /** Un ticket del día (espejo de `ReceiptSummary` del repositorio). */
@@ -34,6 +45,7 @@ interface Recibo {
   storeId: string;
   storeName: string;
   storeTimezone: string;
+  lines: Linea[];
 }
 
 type Orden = 'desc' | 'asc';
@@ -76,11 +88,13 @@ export default function VentasPanel() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Detalle del día seleccionado.
+  // Detalle del día seleccionado (se muestra en un modal).
   const [diaSel, setDiaSel] = useState<string | null>(null);
   const [recibos, setRecibos] = useState<Recibo[]>([]);
   const [cargandoRecibos, setCargandoRecibos] = useState(false);
   const [errorRecibos, setErrorRecibos] = useState<string | null>(null);
+  // Ticket con su desplegable de renglones abierto (acordeón dentro del modal).
+  const [reciboAbierto, setReciboAbierto] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
     setCargando(true);
@@ -109,13 +123,10 @@ export default function VentasPanel() {
 
   const abrirDia = useCallback(
     async (businessDate: string) => {
-      if (diaSel === businessDate) {
-        setDiaSel(null);
-        setRecibos([]);
-        return;
-      }
+      // Abre el modal del día (cerrar es con el modal, no re-tocando la fila).
       setDiaSel(businessDate);
       setRecibos([]);
+      setReciboAbierto(null);
       setErrorRecibos(null);
       setCargandoRecibos(true);
       try {
@@ -131,8 +142,14 @@ export default function VentasPanel() {
         setCargandoRecibos(false);
       }
     },
-    [diaSel, sucursal],
+    [sucursal],
   );
+
+  const cerrarDia = useCallback(() => {
+    setDiaSel(null);
+    setRecibos([]);
+    setReciboAbierto(null);
+  }, []);
 
   const resumen = useMemo(() => {
     const netas = dias.reduce((a, d) => a + d.netSalesCents, 0);
@@ -250,7 +267,8 @@ export default function VentasPanel() {
                     key={d.businessDate}
                     role="button"
                     tabIndex={0}
-                    aria-expanded={diaSel === d.businessDate}
+                    aria-haspopup="dialog"
+                    title="Ver los tickets de este día"
                     onClick={() => void abrirDia(d.businessDate)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === ' ') {
@@ -258,9 +276,7 @@ export default function VentasPanel() {
                         void abrirDia(d.businessDate);
                       }
                     }}
-                    className={`cursor-pointer border-b border-border-base last:border-0 ${
-                      diaSel === d.businessDate ? 'bg-primary-soft' : 'hover:bg-app'
-                    }`}
+                    className="cursor-pointer border-b border-border-base last:border-0 hover:bg-app"
                   >
                     <td className="whitespace-nowrap px-4 py-2 text-text-strong">
                       {diaLegible(d.businessDate)}
@@ -281,7 +297,7 @@ export default function VentasPanel() {
                       {d.refundsCents > 0 ? formatMxn(d.refundsCents) : '—'}
                     </td>
                     <td className="px-2 py-2 text-right text-text-muted">
-                      <span aria-hidden="true">{diaSel === d.businessDate ? '▾' : '▸'}</span>
+                      <span aria-hidden="true">›</span>
                     </td>
                   </tr>
                 ))}
@@ -295,18 +311,14 @@ export default function VentasPanel() {
                 key={d.businessDate}
                 type="button"
                 onClick={() => void abrirDia(d.businessDate)}
-                aria-expanded={diaSel === d.businessDate}
-                className={`block w-full rounded-lg border p-4 text-left ${
-                  diaSel === d.businessDate
-                    ? 'border-primary bg-primary-soft'
-                    : 'border-border-base bg-surface'
-                }`}
+                aria-haspopup="dialog"
+                className="block w-full rounded-lg border border-border-base bg-surface p-4 text-left"
               >
                 <div className="flex items-baseline justify-between gap-3">
                   <p className="text-sm font-medium text-text-strong">
                     {diaLegible(d.businessDate)}
                     <span aria-hidden="true" className="ml-1 text-text-muted">
-                      {diaSel === d.businessDate ? '▾' : '▸'}
+                      ›
                     </span>
                   </p>
                   <p
@@ -326,17 +338,18 @@ export default function VentasPanel() {
             ))}
           </section>
 
-          {diaSel && (
-            <DetalleDia
-              dia={diaSel}
-              recibos={recibos}
-              cargando={cargandoRecibos}
-              error={errorRecibos}
-              variasSucursales={variasSucursales}
-              onCerrar={() => { setDiaSel(null); setRecibos([]); }}
-              onReintentar={() => void abrirDia(diaSel)}
-            />
-          )}
+          <DetalleModal
+            open={!!diaSel}
+            dia={diaSel ?? ''}
+            recibos={recibos}
+            cargando={cargandoRecibos}
+            error={errorRecibos}
+            variasSucursales={variasSucursales}
+            reciboAbierto={reciboAbierto}
+            onToggleRecibo={(id) => setReciboAbierto((x) => (x === id ? null : id))}
+            onCerrar={cerrarDia}
+            onReintentar={() => diaSel && void abrirDia(diaSel)}
+          />
 
           {dias.some((d) => d.netSalesCents < 0) && (
             <p className="text-xs text-text-muted">
@@ -350,136 +363,141 @@ export default function VentasPanel() {
   );
 }
 
-function DetalleDia({
+/** Cantidad: entera tal cual, con decimales solo cuando los hay (0.5, 0.75 kg). */
+function formatCantidad(q: number): string {
+  return Number.isInteger(q) ? String(q) : q.toLocaleString('es-MX', { maximumFractionDigits: 3 });
+}
+
+function DetalleModal({
+  open,
   dia,
   recibos,
   cargando,
   error,
   variasSucursales,
+  reciboAbierto,
+  onToggleRecibo,
   onCerrar,
   onReintentar,
 }: {
+  open: boolean;
   dia: string;
   recibos: Recibo[];
   cargando: boolean;
   error: string | null;
   variasSucursales: boolean;
+  reciboAbierto: string | null;
+  onToggleRecibo: (id: string) => void;
   onCerrar: () => void;
   onReintentar: () => void;
 }) {
   return (
-    <section className="rounded-lg border border-primary/40 bg-surface">
-      <div className="flex items-center justify-between gap-3 border-b border-border-base px-4 py-3">
-        <h3 className="text-sm font-semibold text-text-strong">
-          Tickets del {diaLegible(dia)}{' '}
-          <span className="font-normal text-text-muted">· {dia}</span>
-        </h3>
-        <button
-          type="button"
-          onClick={onCerrar}
-          className="rounded p-1 text-lg leading-none text-text-muted hover:text-text-strong"
-          aria-label="Cerrar detalle del día"
-        >
-          ✕
-        </button>
-      </div>
-
+    <Modal open={open} title={dia ? `Tickets del ${diaLegible(dia)}` : 'Tickets'} onClose={onCerrar}>
       {cargando ? (
-        <div className="p-4">
-          <TableSkeleton rows={4} cols={4} />
-        </div>
+        <TableSkeleton rows={5} cols={3} />
       ) : error ? (
-        <div className="p-4">
-          <ErrorState message={error} onRetry={onReintentar} />
-        </div>
+        <ErrorState message={error} onRetry={onReintentar} />
       ) : recibos.length === 0 ? (
-        <p className="px-4 py-6 text-center text-sm text-text-muted">
-          No hay tickets para este día.
-        </p>
+        <p className="py-6 text-center text-sm text-text-muted">No hay tickets para este día.</p>
       ) : (
         <>
-          {/* Escritorio: tabla */}
-          <div className="hidden overflow-x-auto lg:block">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border-base text-xs uppercase tracking-wide text-text-muted">
-                  <th className="px-4 py-2 text-left font-medium">Hora</th>
-                  <th className="px-4 py-2 text-left font-medium">Ticket</th>
-                  {variasSucursales && (
-                    <th className="px-4 py-2 text-left font-medium">Sucursal</th>
-                  )}
-                  <th className="px-4 py-2 text-left font-medium">Tipo</th>
-                  <th className="px-4 py-2 text-right font-medium">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recibos.map((r) => (
-                  <tr key={r.id} className="border-b border-border-base last:border-0">
-                    <td className="whitespace-nowrap px-4 py-2 tabular-nums text-text-muted">
-                      {horaLegible(r.providerCreatedAt, r.storeTimezone)}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-2 font-medium text-text-strong">
-                      {r.receiptNumber}
-                      {r.receiptType === 'REFUND' && r.refundForReceiptNumber && (
-                        <span className="ml-1 text-xs font-normal text-text-muted">
-                          (de {r.refundForReceiptNumber})
-                        </span>
-                      )}
-                    </td>
-                    {variasSucursales && (
-                      <td className="px-4 py-2 text-text-base">{r.storeName}</td>
-                    )}
-                    <td className="px-4 py-2">
-                      <TipoBadge tipo={r.receiptType} />
-                    </td>
-                    <td
-                      className={`px-4 py-2 text-right font-medium tabular-nums ${
-                        r.receiptType === 'REFUND' ? 'text-danger' : 'text-text-strong'
-                      }`}
-                    >
-                      {formatMxn(importeConSigno(r))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Móvil: tarjetas */}
-          <div className="space-y-2 p-3 lg:hidden">
-            {recibos.map((r) => (
-              <div
-                key={r.id}
-                className="rounded-md border border-border-base bg-app/40 p-3"
-              >
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="text-sm font-medium text-text-strong">
-                    {r.receiptNumber}
-                    <span className="ml-2 text-xs font-normal tabular-nums text-text-muted">
-                      {horaLegible(r.providerCreatedAt, r.storeTimezone)}
-                    </span>
-                  </p>
-                  <p
-                    className={`text-sm font-semibold tabular-nums ${
-                      r.receiptType === 'REFUND' ? 'text-danger' : 'text-text-strong'
-                    }`}
+          <p className="mb-3 text-xs text-text-muted">
+            {dia} · {recibos.length} {recibos.length === 1 ? 'ticket' : 'tickets'} · toca uno
+            para ver sus renglones
+          </p>
+          {/* El cuerpo del modal ya tiene scroll propio (overflow-y-auto): la
+              lista crece dentro del modal sin empujar la página. */}
+          <ul className="space-y-2">
+            {recibos.map((r) => {
+              const abierto = reciboAbierto === r.id;
+              return (
+                <li key={r.id} className="overflow-hidden rounded-md border border-border-base">
+                  <button
+                    type="button"
+                    onClick={() => onToggleRecibo(r.id)}
+                    aria-expanded={abierto}
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left hover:bg-app"
                   >
-                    {formatMxn(importeConSigno(r))}
-                  </p>
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                  <TipoBadge tipo={r.receiptType} />
-                  <span>· {r.storeName}</span>
-                  {r.receiptType === 'REFUND' && r.refundForReceiptNumber && (
-                    <span>· de {r.refundForReceiptNumber}</span>
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-medium text-text-strong">
+                        {r.receiptNumber}
+                        <span className="ml-2 text-xs font-normal tabular-nums text-text-muted">
+                          {horaLegible(r.providerCreatedAt, r.storeTimezone)}
+                        </span>
+                      </span>
+                      <span className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                        <TipoBadge tipo={r.receiptType} />
+                        {variasSucursales && <span>· {r.storeName}</span>}
+                        {r.receiptType === 'REFUND' && r.refundForReceiptNumber && (
+                          <span>· de {r.refundForReceiptNumber}</span>
+                        )}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 items-center gap-2">
+                      <span
+                        className={`text-sm font-semibold tabular-nums ${
+                          r.receiptType === 'REFUND' ? 'text-danger' : 'text-text-strong'
+                        }`}
+                      >
+                        {formatMxn(importeConSigno(r))}
+                      </span>
+                      <span aria-hidden="true" className="text-text-muted">
+                        {abierto ? '▾' : '▸'}
+                      </span>
+                    </span>
+                  </button>
+
+                  {abierto && (
+                    <div className="border-t border-border-base bg-app/40 px-3 py-2.5 text-sm">
+                      {r.lines.length === 0 ? (
+                        <p className="text-xs text-text-muted">
+                          Este ticket no tiene renglones (venta abierta o sin productos).
+                        </p>
+                      ) : (
+                        <ul className="space-y-1.5">
+                          {r.lines.map((l, i) => (
+                            <li key={i} className="flex items-start justify-between gap-3">
+                              <span className="min-w-0 text-text-base">
+                                <span className="tabular-nums text-text-muted">
+                                  {formatCantidad(l.quantity)}×
+                                </span>{' '}
+                                {l.itemName}
+                                {l.variantName ? (
+                                  <span className="text-text-muted"> · {l.variantName}</span>
+                                ) : null}
+                              </span>
+                              <span className="shrink-0 tabular-nums text-text-strong">
+                                {formatMxn(l.totalCents)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {(r.taxCents > 0 || r.tipCents > 0) && (
+                        <dl className="mt-2 space-y-0.5 border-t border-border-base pt-2 text-xs text-text-muted">
+                          {r.taxCents > 0 && (
+                            <div className="flex justify-between">
+                              <dt>Impuesto incluido</dt>
+                              <dd className="tabular-nums">{formatMxn(r.taxCents)}</dd>
+                            </div>
+                          )}
+                          {r.tipCents > 0 && (
+                            <div className="flex justify-between">
+                              <dt>Propina</dt>
+                              <dd className="tabular-nums">{formatMxn(r.tipCents)}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      )}
+                    </div>
                   )}
-                </div>
-              </div>
-            ))}
-          </div>
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
-    </section>
+    </Modal>
   );
 }
 
