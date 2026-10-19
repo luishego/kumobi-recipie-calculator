@@ -19,6 +19,53 @@ export interface UpsertResult {
   lines: number;
 }
 
+/** Un ticket para la vista de detalle de un día (HU-17). Incluye la sucursal. */
+export interface ReceiptSummary {
+  id: string;
+  receiptNumber: string;
+  receiptType: 'SALE' | 'REFUND';
+  totalCents: number;
+  taxCents: number;
+  tipCents: number;
+  refundForReceiptNumber: string | null;
+  diningOption: string | null;
+  providerCreatedAt: string;
+  storeId: string;
+  /** Nombre de la sucursal (viene de Loyverse). Se muestra en cada ticket. */
+  storeName: string;
+  /** Zona de la sucursal, para formatear la hora sin caer en UTC. */
+  storeTimezone: string;
+}
+
+interface FilaReciboDia {
+  id: string;
+  receipt_number: string;
+  receipt_type: 'SALE' | 'REFUND';
+  total_cents: number;
+  total_tax_cents: number;
+  tip_cents: number;
+  refund_for_receipt_number: string | null;
+  dining_option: string | null;
+  provider_created_at: string;
+  store_id: string;
+  store_name: string;
+  store_timezone: string;
+}
+
+// Los cancelados se excluyen, igual que en los totales del día (§8): así los
+// tickets mostrados cuadran con la cifra sobre la que se hizo clic.
+const RECIBOS_POR_DIA = `
+SELECT r.id, r.receipt_number, r.receipt_type, r.total_cents, r.total_tax_cents,
+       r.tip_cents, r.refund_for_receipt_number, r.dining_option,
+       r.provider_created_at, r.store_id,
+       s.name AS store_name, s.timezone AS store_timezone
+  FROM sales_receipts r
+  JOIN sales_stores s ON s.id = r.store_id
+ WHERE r.tenant_id = ?
+   AND r.cancelled_at IS NULL
+   AND r.business_date = ?{{FILTRO}}
+ ORDER BY r.provider_created_at ASC, r.receipt_number ASC`;
+
 const UPSERT_RECEIPT = `
 INSERT INTO sales_receipts (
   id, tenant_id, account_id, store_id, provider, receipt_number, receipt_type,
@@ -134,6 +181,39 @@ export function createReceiptsRepo(db: D1Database, tenantId: string) {
         .bind(tenantId)
         .first<{ c: number }>();
       return row?.c ?? 0;
+    },
+
+    /**
+     * Tickets de UN día de negocio (los que componen la cifra de ese día en
+     * `dailyTotals`): excluye cancelados y trae el nombre y la zona de la
+     * sucursal. `storeId` acota a una sucursal; sin él, todas las del inquilino.
+     */
+    async receiptsByDay(
+      businessDate: string,
+      opts: { storeId?: string } = {},
+    ): Promise<ReceiptSummary[]> {
+      const filtro = opts.storeId ? ' AND r.store_id = ?' : '';
+      const args = opts.storeId
+        ? [tenantId, businessDate, opts.storeId]
+        : [tenantId, businessDate];
+      const res = await db
+        .prepare(RECIBOS_POR_DIA.replace('{{FILTRO}}', filtro))
+        .bind(...args)
+        .all<FilaReciboDia>();
+      return (res.results ?? []).map((f) => ({
+        id: f.id,
+        receiptNumber: f.receipt_number,
+        receiptType: f.receipt_type,
+        totalCents: f.total_cents,
+        taxCents: f.total_tax_cents,
+        tipCents: f.tip_cents,
+        refundForReceiptNumber: f.refund_for_receipt_number,
+        diningOption: f.dining_option,
+        providerCreatedAt: f.provider_created_at,
+        storeId: f.store_id,
+        storeName: f.store_name,
+        storeTimezone: f.store_timezone,
+      }));
     },
   };
 }

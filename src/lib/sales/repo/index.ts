@@ -42,7 +42,7 @@ export function createRepo(db: D1Database, tenantId: string): SalesRepo {
   };
 }
 
-export type { UpsertResult } from './receipts';
+export type { UpsertResult, ReceiptSummary } from './receipts';
 export type { AccountInput, AccountRow, StoreRow } from './stores';
 export type { RangoFechas } from './totals';
 export type { SyncStateRow, RunCounts, RunKind, BackfillStatus } from './syncState';

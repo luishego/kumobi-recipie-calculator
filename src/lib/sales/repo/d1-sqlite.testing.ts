@@ -94,10 +94,15 @@ export interface TestDb {
   raw: DatabaseSync;
 }
 
+/** Envuelve una `DatabaseSync` (en memoria o sobre archivo) como si fuera D1. */
+export function wrapAsD1(db: DatabaseSync): D1Database {
+  return new SqliteD1(db) as unknown as D1Database;
+}
+
 /** Base en memoria con las migraciones aplicadas y claves foráneas activas. */
 export function createTestD1(migrations: readonly string[]): TestDb {
   const db = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON;');
   for (const sql of migrations) db.exec(sql);
-  return { d1: new SqliteD1(db) as unknown as D1Database, raw: db };
+  return { d1: wrapAsD1(db), raw: db };
 }

@@ -21,10 +21,18 @@
   "compatibility_date": "2026-08-19",
   "compatibility_flags": ["nodejs_compat"],
 
-  // 09:00 UTC = 03:00 hora de México. México no observa horario de verano desde
-  // 2022, así que esta expresión no se desfasa por temporada.
+  // ⚠️ La expresión del cron va en UTC, SIEMPRE — no en hora local. Confundirlo
+  //    ya costó seis semanas sin sincronizar: el 2026-09-07 se cambió a "0 3"
+  //    creyendo que eso eran las 3 de la mañana, y lo que hizo fue moverla a las
+  //    21:00 de México, en plena cena y con el día de negocio todavía abierto.
+  //
+  //      09:00 UTC = 03:00 en México  ← la que queremos: el día ya cerró
+  //      03:00 UTC = 21:00 en México
+  //
+  //    México no observa horario de verano desde 2022, así que no se desfasa
+  //    por temporada.
   "triggers": {
-    "crons": ["0 3 * * *"]
+    "crons": ["0 9 * * *"]
   },
 
   // Los MISMOS recursos que usa la app. Cada uno con su binding; son
