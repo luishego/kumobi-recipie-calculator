@@ -4,7 +4,7 @@
 // privado antes de validar la sesión.
 import { defineMiddleware } from 'astro:middleware';
 import { verifySessionToken, readEnv } from './lib/session';
-import { SESSION_COOKIE, PRIVATE_PATHS } from './lib/constants';
+import { SESSION_COOKIE, PRIVATE_PATHS, isStaffRole } from './lib/constants';
 
 function isPrivate(pathname: string): boolean {
   return PRIVATE_PATHS.some(
@@ -23,10 +23,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
   if (cookie && secret) {
     const user = await verifySessionToken(cookie, secret);
-    if (user) {
+    // Estar autenticado ya no alcanza: hace falta rol de staff. Desde la épica
+    // 04 existen cuentas que solo administran la carta pública, y sin esta
+    // comprobación llegaban a la carcasa de este panel para encontrarse una
+    // pantalla rota de `permission-denied` (las Firestore Rules sí las paraban).
+    if (user && isStaffRole(user.role)) {
       locals.user = user;
     } else {
-      // Cookie inválida o expirada: se limpia y se trata como no autenticado.
+      // Cookie inválida, expirada o sin rol de staff: se limpia y se trata como
+      // no autenticado.
       cookies.delete(SESSION_COOKIE, { path: '/' });
     }
   }
