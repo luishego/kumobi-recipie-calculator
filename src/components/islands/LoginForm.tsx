@@ -17,8 +17,18 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
+/**
+ * Error cuyo texto YA es microcopy, puesto por el servidor.
+ *
+ * Existe para el caso "credenciales buenas, cuenta sin acceso": el motivo real
+ * solo lo sabe el endpoint de sesión, y aplastarlo contra el mensaje genérico
+ * dejaría a alguien reintentando para siempre una contraseña que está bien.
+ */
+class SessionError extends Error {}
+
 /** Mapea errores de Firebase Auth a microcopy en español (sin exponer detalle técnico). */
 function authErrorMessage(err: unknown): string {
+  if (err instanceof SessionError) return err.message;
   if (err instanceof FirebaseError) {
     switch (err.code) {
       case 'auth/invalid-credential':
@@ -64,7 +74,10 @@ export default function LoginForm() {
         body: JSON.stringify({ idToken }),
       });
       if (!res.ok) {
-        throw new Error('session-exchange-failed');
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new SessionError(
+          body?.error ?? 'No se pudo iniciar sesión. Inténtalo de nuevo.',
+        );
       }
       // Éxito → dashboard (recarga completa para que el middleware SSR valide).
       window.location.assign('/');

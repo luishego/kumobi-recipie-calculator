@@ -8,7 +8,7 @@ import {
   mintSessionToken,
   readEnv,
 } from '../../lib/session';
-import { SESSION_COOKIE } from '../../lib/constants';
+import { SESSION_COOKIE, isStaffRole } from '../../lib/constants';
 
 const DEFAULT_MAX_AGE_MS = 60 * 60 * 24 * 5 * 1000; // 5 días
 
@@ -44,6 +44,19 @@ export const POST: APIRoute = async ({ request, cookies, locals }) => {
 
   try {
     const user = await verifyFirebaseIdToken(idToken, projectId);
+
+    // Autenticado no es autorizado. Se rechaza aquí y no solo en el middleware
+    // para que quien no tiene rol vea POR QUÉ: si se le acuñara la cookie, el
+    // guard se la borraría acto seguido y acabaría de vuelta en el login sin
+    // explicación, pareciendo que su contraseña falló.
+    if (!isStaffRole(user.role)) {
+      console.warn(`[api/session] sesión rechazada por rol: ${user.email} (role=${user.role})`);
+      return json(
+        { error: 'Tu cuenta es válida, pero no tiene acceso a este panel.' },
+        403,
+      );
+    }
+
     const token = await mintSessionToken(user, secret, Math.floor(expiresInMs / 1000));
 
     cookies.set(SESSION_COOKIE, token, {
