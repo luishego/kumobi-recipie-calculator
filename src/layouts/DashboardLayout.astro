@@ -9,10 +9,16 @@ interface Props {
   title: string;
 }
 const { title } = Astro.props;
+import { puedeEntrar } from '../lib/permisos';
+
 const user = Astro.locals.user;
 const pathname = Astro.url.pathname;
 
-const nav = [
+// Se oculta lo que este rol no puede abrir. Es cortesía, no seguridad: quien
+// cierra de verdad es el middleware, porque un enlace escondido no impide
+// teclear la URL. Mostrar puertas que dan a un redirect sería peor que no
+// mostrarlas.
+const navCompleta = [
   { href: '/', label: 'Dashboard' },
   { href: '/insumos', label: 'Insumos' },
   { href: '/recetas', label: 'Recetas' },
@@ -26,6 +32,12 @@ const nav = [
   { href: '/ventas/estado', label: 'Estado de sync' },
   { href: '/ventas/conciliacion', label: 'Conciliación' },
 ];
+
+const nav = navCompleta.filter((item) => puedeEntrar(user?.role, item.href));
+
+// Si llegó aquí rebotado desde una ruta sin permiso, se le dice por qué. Un
+// redirect silencioso deja a la persona pensando que el enlace está roto.
+const sinPermiso = Astro.url.searchParams.get('sin-permiso');
 
 // Activo = el enlace MÁS ESPECÍFICO que cubre la ruta actual. Sin esa segunda
 // condición, "/ventas" y "/ventas/mapeo" se marcarían los dos a la vez, porque
@@ -118,6 +130,19 @@ const initials = (user?.email ?? '?').slice(0, 2).toUpperCase();
           </div>
         </header>
         <main class="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          {sinPermiso && (
+            <div
+              role="alert"
+              class="mb-5 flex items-start gap-2 rounded-md border border-warning/30 bg-fc-warn-bg px-3 py-2 text-sm text-fc-warn-text"
+            >
+              <span aria-hidden="true" class="mt-0.5">⚠</span>
+              <div class="flex-1">
+                <strong class="font-semibold">Esa sección no está disponible para tu cuenta.</strong>{' '}
+                «{sinPermiso}» es parte de la administración de ventas y la maneja un
+                administrador. Si necesitas entrar, pídeselo a quien administre el panel.
+              </div>
+            </div>
+          )}
           <slot />
         </main>
       </div>

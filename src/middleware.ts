@@ -4,7 +4,8 @@
 // privado antes de validar la sesión.
 import { defineMiddleware } from 'astro:middleware';
 import { verifySessionToken, readEnv } from './lib/session';
-import { SESSION_COOKIE, PRIVATE_PATHS, isStaffRole } from './lib/constants';
+import { SESSION_COOKIE, PRIVATE_PATHS } from './lib/constants';
+import { isStaffRole, puedeEntrar } from './lib/permisos';
 
 function isPrivate(pathname: string): boolean {
   return PRIVATE_PATHS.some(
@@ -53,6 +54,23 @@ export const onRequest = defineMiddleware(async (context, next) => {
       });
     }
     return redirect('/login');
+  }
+
+  // Autenticado y con rol de staff, pero esta ruta pide más (integración de
+  // ventas). Se comprueba EN EL SERVIDOR y no solo escondiendo enlaces: ocultar
+  // un menú no impide teclear la URL, y los endpoints no tienen menú que
+  // esconder.
+  if (locals.user && !puedeEntrar(locals.user.role, pathname)) {
+    if (pathname.startsWith('/api/')) {
+      return new Response(
+        JSON.stringify({ error: 'Tu cuenta no tiene permiso para esta operación.' }),
+        { status: 403, headers: { 'Content-Type': 'application/json; charset=utf-8' } },
+      );
+    }
+    // A una página se la manda al panel con el motivo, en vez de dejarla en un
+    // 403 sin salida: el usuario no hizo nada malo, simplemente ese pedazo no
+    // es suyo.
+    return redirect(`/?sin-permiso=${encodeURIComponent(pathname)}`);
   }
 
   return next();
