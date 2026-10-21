@@ -8,7 +8,8 @@ import {
   mintSessionToken,
   readEnv,
 } from '../../lib/session';
-import { SESSION_COOKIE, isStaffRole } from '../../lib/constants';
+import { SESSION_COOKIE } from '../../lib/constants';
+import { isStaffRole } from '../../lib/permisos';
 
 const DEFAULT_MAX_AGE_MS = 60 * 60 * 24 * 5 * 1000; // 5 días
 

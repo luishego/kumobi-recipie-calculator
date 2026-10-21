@@ -35,19 +35,11 @@ export const UMBRAL_SIN_SINCRONIZAR_HORAS = 36;
 export const PRIVATE_PATHS = ['/', '/insumos', '/recetas', '/ventas', '/api/sales'];
 
 /**
- * Roles que pueden usar este panel. Misma lista que `isStaff()` en
- * `firestore.rules` y que los roles válidos de `scripts/set-claim.mjs`.
+ * Los roles y lo que cada uno puede hacer viven en `src/lib/permisos.ts`.
  *
- * Hasta ahora el guard solo exigía **sesión válida**, y el rol lo hacía cumplir
- * Firestore. Con eso bastaba mientras todas las cuentas del proyecto fueran de
- * este panel. Dejó de bastar al aparecer cuentas de solo-menú (épica 04 §5.4):
- * sin rol de staff llegaban a la carcasa del panel y veían una pantalla rota a
- * fuerza de `permission-denied`. No era una fuga —las Rules aguantaban— pero sí
- * una puerta que no lleva a ningún lado y que conviene cerrar antes.
+ * Estuvieron aquí mientras la única pregunta era "¿es staff?". Al aparecer
+ * capacidades distintas por rol se movieron a su propio módulo, antes de que la
+ * lógica se repartiera entre este archivo y el otro: dos lugares que deciden
+ * quién entra a dónde terminan discrepando, y la discrepancia se descubre
+ * cuando alguien ve algo que no debía.
  */
-export const STAFF_ROLES = ['admin', 'chef', 'manager'] as const;
-
-/** ¿Este rol puede usar el panel de costeo? */
-export function isStaffRole(role: string | null | undefined): boolean {
-  return typeof role === 'string' && (STAFF_ROLES as readonly string[]).includes(role);
-}
